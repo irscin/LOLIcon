@@ -75,7 +75,8 @@ static int profile_game[] = {444, 222, 222, 166, 222};
 static int profile_max_performance[] = {444, 222, 222, 166, 333};
 static int profile_holy_shit_performance[] = {500, 222, 222, 166, 333};
 static int profile_max_battery[] = {111, 111, 111, 111, 111};
-static int* profiles[5] = {profile_default,profile_game,profile_max_performance, profile_holy_shit_performance, profile_max_battery};
+static int profile_mid_battery[] = {188, 111, 111, 111, 111};
+static int* profiles[6] = {profile_default,profile_game,profile_max_performance, profile_holy_shit_performance, profile_max_battery, profile_mid_battery};
 
 
 int (*_kscePowerGetGpuEs4ClockFrequency)(int*, int*);
@@ -238,7 +239,7 @@ int checkButtons(int port, tai_hook_ref_t ref_hook, SceCtrlData *ctrl, int count
 					} else if ((buttons & SCE_CTRL_RIGHT)){
 						switch(page) {
 							case 1:
-								if(current_config.mode <4) {
+								if(current_config.mode <5) {
 									ctrl_timestamp = ctrl->timeStamp;
 									current_config.mode++;
 									refreshClocks();
@@ -422,13 +423,16 @@ void drawMenu() {
 			blit_stringf(LEFT_LABEL_X, 88, "ACTUAL OVERCLOCK");		
 			blit_stringf(LEFT_LABEL_X, 120, "PROFILE    ");
 			switch(current_config.mode) {
-				case 4: 
+                case 5:
+                    blit_stringf(RIGHT_LABEL_X, 120, "Mid Batt. ");
+                    break;
+				case 4:
 					blit_stringf(RIGHT_LABEL_X, 120, "Max Batt.");
 					break;
-				case 3: 
+				case 3:
 					blit_stringf(RIGHT_LABEL_X, 120, "Holy Shit.");
 					break;
-				case 2: 
+				case 2:
 					blit_stringf(RIGHT_LABEL_X, 120, "Max Perf.");
 					break;
 				case 1:
@@ -562,23 +566,23 @@ int module_start(SceSize argc, const void *args) {
 	module_get_export_func(KERNEL_PID, "ScePower", 0x1590166F, 0x621BD8FD , &_kscePowerSetGpuClockFrequency);
 
 	tai_module_info_t tai_info;
-	
+
 	tai_info.size = sizeof(tai_module_info_t);
 
 	clock_r1 = (unsigned int *)pa2va(0xE3103000);
-	clock_r2 = (unsigned int *)pa2va(0xE3103004);	
-	
+	clock_r2 = (unsigned int *)pa2va(0xE3103004);
+
 	taiGetModuleInfoForKernel(KERNEL_PID, "ScePower", &tai_info);
-	module_get_offset(KERNEL_PID, tai_info.modid, 1,  0x4124 + 0xA4, (uintptr_t)&clock_speed);	
-	
+	module_get_offset(KERNEL_PID, tai_info.modid, 1,  0x4124 + 0xA4, (uintptr_t)&clock_speed);
+
 	memset(&titleid, 0, sizeof(titleid));
 	strncpy(titleid, "main", sizeof(titleid));
 	reset_config();
-	
+
 	current_config.mode = 3;
-	
+
 	refreshClocks();
-	
+
 	if(module_get_export_func(KERNEL_PID, "SceKernelModulemgr", 0xC445FA63, 0xD269F915 , &_ksceKernelGetModuleInfo))
 		module_get_export_func(KERNEL_PID, "SceKernelModulemgr", 0x92C9FFC2, 0xDAA90093 , &_ksceKernelGetModuleInfo);
 	if(module_get_export_func(KERNEL_PID, "SceKernelModulemgr", 0xC445FA63, 0x97CF7B4E , &_ksceKernelGetModuleList))
@@ -586,15 +590,15 @@ int module_start(SceSize argc, const void *args) {
 	if(module_get_export_func(KERNEL_PID, "SceProcessmgr", 0x7A69DE86, 0x4CA7DC42 , &_ksceKernelExitProcess))
 		module_get_export_func(KERNEL_PID, "SceProcessmgr", 0xEB1F8EF7, 0x905621F9 , &_ksceKernelExitProcess);
 
-	
-	g_hooks[0] = taiHookFunctionExportForKernel(KERNEL_PID, &ref_hook0, "SceDisplay",0x9FED47AC,0x16466675, _sceDisplaySetFrameBufInternalForDriver); 
-	
-	
+
+	g_hooks[0] = taiHookFunctionExportForKernel(KERNEL_PID, &ref_hook0, "SceDisplay",0x9FED47AC,0x16466675, _sceDisplaySetFrameBufInternalForDriver);
+
+
 	g_hooks[10] = taiHookFunctionExportForKernel(KERNEL_PID, &power_hook1, "ScePower", 0x1590166F, 0x74DB5AE5,power_patched1); // scePowerSetArmClockFrequency
 	g_hooks[11] = taiHookFunctionExportForKernel(KERNEL_PID,	&power_hook2, "ScePower", 0x1590166F, 0xB8D7B3FB, power_patched2); // scePowerSetBusClockFrequency
 	g_hooks[12] = taiHookFunctionExportForKernel(KERNEL_PID, &power_hook3, "ScePower", 0x1590166F, 0x264C24FC, power_patched3); // scePowerSetGpuClockFrequency
 	g_hooks[13] = taiHookFunctionExportForKernel(KERNEL_PID, &power_hook4, "ScePower", 0x1590166F, 0xA7739DBE, power_patched4); // scePowerSetGpuXbarClockFrequency
-	
+
 	taiGetModuleInfoForKernel(KERNEL_PID, "SceCtrl", &tai_info);
 	g_hooks[1] = taiHookFunctionExportForKernel(KERNEL_PID, &ref_hook1, "SceCtrl", TAI_ANY_LIBRARY, 0xEA1D3A34, keys_patched1); // sceCtrlPeekBufferPositive
 	g_hooks[2] =  taiHookFunctionOffsetForKernel(KERNEL_PID, &ref_hook2, tai_info.modid, 0, 0x3EF8, 1, keys_patched2); // sceCtrlPeekBufferPositive2
@@ -604,10 +608,10 @@ int module_start(SceSize argc, const void *args) {
 	g_hooks[6] =  taiHookFunctionOffsetForKernel(KERNEL_PID, &ref_hook6, tai_info.modid, 0, 0x3928, 1, keys_patched6); // sceCtrlPeekBufferPositiveExt
     g_hooks[7] =  taiHookFunctionOffsetForKernel(KERNEL_PID, &ref_hook7, tai_info.modid, 0, 0x449C, 1, keys_patched7); // sceCtrlReadBufferPositive2
     g_hooks[8] =  taiHookFunctionOffsetForKernel(KERNEL_PID, &ref_hook8, tai_info.modid, 0, 0x3BCC, 1, keys_patched8); // sceCtrlReadBufferPositiveExt
-		  
-	g_hooks[9] = taiHookFunctionImportForKernel(KERNEL_PID, &process_hook0, "SceProcessmgr", TAI_ANY_LIBRARY, 0x414CC813, SceProcEventForDriver_414CC813); 
-		
-	
+
+	g_hooks[9] = taiHookFunctionImportForKernel(KERNEL_PID, &process_hook0, "SceProcessmgr", TAI_ANY_LIBRARY, 0x414CC813, SceProcEventForDriver_414CC813);
+
+
 	return SCE_KERNEL_START_SUCCESS;
 }
 
